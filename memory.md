@@ -1,41 +1,82 @@
 # Memory progetto
 
+Ultimo aggiornamento: 15 maggio 2026.
+
 ## Scopo
 
-Il progetto principale e' un totem canvas interattivo per "Il Cinema in Piazza".
+Il progetto e' un totem canvas interattivo per "Il Cinema in Piazza".
+
 L'utente vede un frame casuale tratto da una lista di film, puo' disegnare sopra
 l'immagine usando una palette di colori, puo' annullare/ripristinare le azioni,
 cancellare il disegno e salvare il risultato su Uploadcare.
 
-La versione attiva dell'interfaccia e' `totem.html` nella root del progetto.
-Il file `index.html` resta solo come redirect leggero verso `totem.html`, utile
-per aprire il progetto dalla root su GitHub Pages.
+La pagina principale dell'esperienza e' `totem.html`.
+Il file `index.html` resta nella root solo come redirect verso `totem.html`,
+cosi' GitHub Pages puo' aprire correttamente il sito dalla root.
+
+## Repository e pubblicazione
+
+Repository GitHub:
+
+```text
+https://github.com/bianchiriccardo03-lab/cineclub-totem.git
+```
+
+Branch di pubblicazione:
+
+```text
+main
+```
+
+GitHub Pages pubblica dalla root del branch `main`.
+
+URL pubblici:
+
+```text
+https://bianchiriccardo03-lab.github.io/cineclub-totem/
+https://bianchiriccardo03-lab.github.io/cineclub-totem/totem.html
+```
+
+Ultimo commit pubblicato verificato:
+
+```text
+9980e26 versione con upload funzionante
+```
+
+Il workflow GitHub Pages `pages build and deployment` e' stato verificato con
+esito `success` sul commit `9980e2601d8593dbc1dc5dd5dd2c29d2c4b6157d`.
+
+GitHub Pages puo' mantenere cache CDN fino a circa 10 minuti. Se si vede una
+versione vecchia, usare refresh forzato o aggiungere un parametro cache-busting:
+
+```text
+https://bianchiriccardo03-lab.github.io/cineclub-totem/totem.html?v=9980e260
+```
 
 ## Struttura attuale
 
 - `totem.html`: file principale dell'app. Contiene HTML, CSS e JavaScript.
-- `index.html`: redirect automatico a `totem.html`, necessario per rendere
-  comodo l'accesso dalla root del sito pubblicato.
-- `.nojekyll`: file vuoto per dire a GitHub Pages di servire il progetto come
-  static site semplice, senza elaborazione Jekyll.
-- `films.json`: elenco dei film disponibili, con titolo, autore, anno, cartella
-  dei frame e range numerico dei frame.
-- `frames/`: cartella con le immagini JPG organizzate per film.
-- `logo.png`: logo mostrato nel footer del totem.
+- `index.html`: redirect automatico a `totem.html`.
+- `.nojekyll`: file vuoto per fare servire il sito da GitHub Pages senza Jekyll.
+- `memory.md`: memoria di progetto, struttura, funzionamento e note operative.
+- `films.json`: elenco dei film, con titolo, autore, anno, cartella dei frame e
+  range numerico dei frame.
+- `frames/`: immagini JPG organizzate per film.
+- `logo.png`: logo mostrato nel footer.
 - `canvas.html`: vecchio prototipo di canvas, non e' la versione principale.
 - `counter.js`, `package.json`, `package-lock.json`, `README.md`: materiali
-  ereditati dal progetto counter/node originale. Non sono il cuore del totem
-  attuale.
+  ereditati dal progetto counter/node originale; non sono il cuore del totem.
 
-La cartella `public/` e' stata rimossa per evitare doppioni: non deve esistere
-un secondo file principale parallelo.
+La cartella `public/` e' stata rimossa dal progetto. Se l'IDE mostra ancora
+`public/index.html` come tab aperto, e' un riferimento vecchio: non va usato e
+non va ricreato.
 
 ## Funzionamento di `totem.html`
 
 La pagina costruisce un layout fisso pensato per un totem:
 
 - area canvas superiore da `1194 x 634`;
-- barra inferiore con informazioni sul film, azioni e palette colori;
+- barra inferiore con informazioni sul film, pulsanti azione e palette colori;
 - footer con logo, testo informativo e QR code.
 
 All'avvio la pagina:
@@ -47,10 +88,37 @@ All'avvio la pagina:
 5. disegna il frame sul canvas con comportamento tipo `cover`;
 6. inizializza palette, pulsanti, QR code ed eventi mouse/touch.
 
+I path sono relativi alla root del sito. Per questo `totem.html`, `films.json`,
+`frames/` e `logo.png` devono restare nella root.
+
+## Dati film
+
+`films.json` contiene una lista di oggetti con questa forma:
+
+```json
+{
+  "cartella": "frames/8_mezzo",
+  "titolo": "8½",
+  "autore": "Federico Fellini",
+  "anno": 1963,
+  "frameMin": 1800,
+  "frameMax": 1862
+}
+```
+
+Il codice costruisce il path del frame cosi':
+
+```js
+`${film.cartella}/Sequence ${String(frameNumber).padStart(5, '0')}.jpg`
+```
+
+I range dichiarati sono stati verificati: tutti i 863 frame attesi sono presenti.
+
 ## Disegno
 
 Il disegno avviene direttamente sul canvas HTML.
-Il colore attivo viene preso dalla palette:
+
+Palette colori corrente:
 
 - viola: `#5B4FFF`
 - giallo: `#FFB800`
@@ -58,42 +126,59 @@ Il colore attivo viene preso dalla palette:
 - verde: `#00C97A`
 - rosso: `#FF2F27`
 
-La linea usa:
+Impostazioni principali del tratto:
 
 - `lineWidth = 4`;
-- estremita' arrotondate;
-- un piccolo jitter casuale per dare un effetto piu' manuale.
+- `lineJoin = 'round'`;
+- `lineCap = 'round'`;
+- piccolo jitter casuale per un effetto piu' manuale.
+
+Gli eventi supportano mouse e touch.
 
 ## Undo, redo e clear
 
 L'app salva snapshot del canvas tramite `getImageData`.
-Gli snapshot vengono mantenuti in due stack:
+
+Stack usati:
 
 - `undoStack`;
 - `redoStack`.
 
-Il limite corrente e' `maxUndo = 10`.
+Limite corrente:
 
-Il pulsante clear ripristina il frame corrente eliminando solo il disegno
-sovrapposto.
+```js
+const maxUndo = 10;
+```
+
+Il pulsante clear cancella il disegno sovrapposto e ridisegna il frame corrente.
 
 ## Upload
 
-Il salvataggio usa Uploadcare.
+Il salvataggio usa Uploadcare tramite `fetch`, senza SDK dedicato.
 
-La chiave pubblica e' definita in:
+Chiave pubblica:
 
 ```js
 const UPLOADCARE_PUBKEY = '5c6b9d160fe3ee2d6566';
 ```
 
-Quando l'utente salva:
+Endpoint:
+
+```text
+https://upload.uploadcare.com/base/
+```
+
+Flusso upload:
 
 1. il canvas viene convertito in PNG con `canvas.toBlob`;
 2. viene creato un nome file basato sul frame corrente e sulla data;
-3. il file viene inviato a `https://upload.uploadcare.com/base/`;
-4. la UI mostra un messaggio di stato;
+3. il file viene inviato a Uploadcare;
+4. la UI mostra stato, successo o errore;
 5. se l'upload riesce, viene caricato un nuovo frame casuale.
+
+Nota: la struttura locale e GitHub Pages sono state verificate, ma l'upload reale
+su Uploadcare va provato manualmente quando serve validare la chiave e il
+salvataggio effettivo.
 
 ## Dipendenze esterne
 
@@ -102,35 +187,76 @@ La pagina carica da CDN:
 - Google Fonts;
 - `qrcode@1.5.1` per generare il QR code.
 
-Uploadcare viene chiamato direttamente via `fetch`, senza SDK dedicato.
+Il QR code punta ancora a:
+
+```text
+https://example.com
+```
+
+Va sostituito con l'URL reale quando disponibile.
+
+## Test locale
+
+Per testare in locale dalla root del progetto:
+
+```bash
+python3 -m http.server 8080
+```
+
+URL locale:
+
+```text
+http://localhost:8080/
+http://localhost:8080/totem.html
+```
+
+Verifiche gia' fatte:
+
+- `index.html`: `200 OK`;
+- `totem.html`: `200 OK`;
+- `films.json`: `200 OK`;
+- `logo.png`: `200 OK`;
+- frame di esempio `frames/8_mezzo/Sequence 01800.jpg`: `200 OK`;
+- unico file app principale: `totem.html`.
+
+## Pubblicazione
+
+Per pubblicare modifiche gia' committate:
+
+```bash
+git push origin main
+```
+
+Per controllare lo stato:
+
+```bash
+git status --short --branch
+```
+
+Per controllare gli ultimi commit:
+
+```bash
+git log --oneline --decorate --max-count=5
+```
+
+Impostazioni GitHub Pages consigliate:
+
+1. repository GitHub;
+2. `Settings`;
+3. `Pages`;
+4. `Build and deployment`;
+5. `Deploy from a branch`;
+6. branch `main`;
+7. folder `/root`.
 
 ## Note importanti
 
-- I path sono pensati per eseguire l'app dalla root del progetto.
-- `films.json` deve restare nella root.
-- `frames/` deve restare nella root.
-- Se si sposta `totem.html`, vanno aggiornati i path di `films.json` e dei frame.
-- Il QR code punta ancora a `https://example.com`: va sostituito con l'URL reale.
+- Non reintrodurre una seconda copia del file principale in `public/`.
+- Non spostare `totem.html`, `films.json`, `frames/` o `logo.png` senza
+  aggiornare i path.
 - Il layout e' fisso, adatto a uno schermo totem specifico. Non e' ancora una UI
   responsive completa.
-- Non reintrodurre una seconda copia del file principale in `public/` senza una
-  ragione precisa.
-
-## Pubblicazione su GitHub Pages
-
-Il progetto e' pronto per essere pubblicato da GitHub Pages usando la root del
-branch principale.
-
-Impostazione consigliata nel repository GitHub:
-
-1. andare in `Settings`;
-2. aprire `Pages`;
-3. in `Build and deployment`, scegliere `Deploy from a branch`;
-4. selezionare branch `main` e folder `/root`;
-5. salvare.
-
-URL attesi:
-
-- `https://<utente>.github.io/<repo>/` apre `index.html` e reindirizza a
-  `totem.html`;
-- `https://<utente>.github.io/<repo>/totem.html` apre direttamente il totem.
+- `index.html` non contiene l'app: serve solo per redirect.
+- `totem.html` e' la fonte principale da modificare.
+- Prima di pubblicare, testare almeno il caricamento di `totem.html`,
+  `films.json` e un frame.
