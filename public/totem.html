@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Il Cinema in Piazza — Totem Canvas</title>
+  <link rel="stylesheet" href="https://use.typekit.net/hoz8cuw.css">
+  <style>
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100vh;
+      background: #121212;
+      user-select: none;
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: auto;
+      font-family: 'sofia-pro', sans-serif;
+      font-weight: 500;
+      color: #ffffff;
+    }
+
+    #page {
+      width: 1194px;
+      height: 834px;
+      margin: auto;
+      background: #121212;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+    }
+
+    .drawing-area {
+      width: 1194px;
+      height: 634px;
+      position: relative;
+      border-radius: 16px;
+      overflow: hidden;
+      background: #f5f5f5;
+    }
+
+    #drawingCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1194px;
+      height: 634px;
+      touch-action: none;
+      border-radius: 16px;
+    }
+
+    .bottom-bar {
+      display: grid;
+      grid-template-columns: 1.8fr 1fr 1fr;
+      align-items: center;
+      gap: 24px;
+      padding: 20px 32px;
+      background: #121212;
+      border-top: 1px solid #333333;
+    }
+
+    .movie-info {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .movie-title {
+      font-family: 'roca', sans-serif;
+      font-size: 32px;
+      font-weight: 700;
+      line-height: 1.05;
+      color: #ffffff;
+    }
+
+    .movie-meta {
+      font-family: 'sofia-pro', sans-serif;
+      font-size: 18px;
+      line-height: 1.3;
+      font-weight: 500;
+      color: #ffffff;
+    }
+
+    .actions-pill {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 12px 20px;
+      border-radius: 999px;
+      background: #121212;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.06);
+    }
+
+    .actions-pill button {
+      width: 60px;
+      height: 60px;
+      border: none;
+      border-radius: 50%;
+      background: transparent;
+      color: #ffffff;
+      font-family: 'sofia-pro', sans-serif;
+      font-size: 22px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: transform 0.15s ease, background-color 0.15s ease;
+      display: grid;
+      place-items: center;
+    }
+
+    .actions-pill img {
+      width: 28px;
+      height: 28px;
+      display: block;
+      filter: invert(1);
+    }
+
+    .actions-pill button:hover,
+    .actions-pill button:active {
+      transform: scale(0.95);
+      background: rgba(255,255,255,0.08);
+    }
+
+    .actions-pill button.is-disabled {
+      pointer-events: none;
+    }
+
+    .actions-pill button.is-disabled img {
+      opacity: 0.2;
+    }
+
+    .color-palette {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 12px;
+      padding: 12px 20px;
+      border-radius: 999px;
+      background: #121212;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.06);
+    }
+
+    .upload-spinner {
+      display: none;
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 72px;
+      height: 72px;
+      margin: -36px 0 0 -36px;
+      border: 6px solid rgba(255,255,255,0.55);
+      border-top-color: #ffffff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      pointer-events: none;
+      z-index: 3;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .color-dot {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      border: 3px solid transparent;
+      cursor: pointer;
+      transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+
+    .color-dot.active {
+      border-color: #ffffff;
+    }
+
+    .color-dot:active {
+      transform: scale(0.95);
+    }
+
+    .footer {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      padding: 0 24px 24px;
+      background: #121212;
+      gap: 24px;
+    }
+
+    .footer-logo img {
+      height: 80px;
+      width: auto;
+      display: block;
+    }
+
+    .footer-copy {
+      display: flex;
+      align-items: flex-end;
+      gap: 16px;
+      margin-left: auto;
+    }
+
+    .footer-text {
+      font-family: 'sofia-pro', sans-serif;
+      font-size: 11px;
+      line-height: 1.35;
+      font-weight: 500;
+      color: #ffffff;
+      max-width: 300px;
+    }
+
+    .footer-text strong {
+      display: block;
+      margin-bottom: 10px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .qr-block {
+      width: 80px;
+      height: 80px;
+      border-radius: 16px;
+      overflow: hidden;
+      background: #f5f5f5;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+    }
+
+    #qrCanvas {
+      width: 80px;
+      height: 80px;
+      display: block;
+    }
+
+    button {
+      cursor: pointer;
+      outline: none;
+      font-family: 'sofia-pro', sans-serif;
+      font-weight: 500;
+      background: none;
+    }
+
+    /* ── MOBILE LAYOUT ── */
+    #mobile-layout {
+      display: none;
+      width: 100dvw;
+      height: 100dvh;
+      flex-direction: row;
+      overflow: hidden;
+      padding: 6px;
+      gap: 8px;
+      background: #121212;
+      margin: 0;
+    }
+
+    .mobile-left {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .mobile-left .drawing-area {
+      width: 100%;
+      height: auto;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .mobile-left #mobileDrawingCanvas {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .mobile-bottom-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 6px;
+      background: #121212;
+      border: 1px solid #333333;
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+
+    .mobile-bottom-bar .movie-info {
+      flex-shrink: 0;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .mobile-bottom-bar .movie-title {
+      font-size: 16px;
+      line-height: 1.2;
+      color: #ffffff;
+    }
+
+    .mobile-bottom-bar .movie-meta {
+      font-size: 12px;
+      line-height: 1.2;
+      color: #ffffff;
+    }
+
+    .mobile-bottom-bar .actions-pill {
+      flex-shrink: 0;
+      gap: 6px;
+      padding: 0;
+      background: transparent;
+      box-shadow: none;
+    }
+
+    .mobile-bottom-bar .actions-pill button {
+      width: 36px;
+      height: 36px;
+    }
+
+    .mobile-bottom-bar .actions-pill img {
+      width: 20px;
+      height: 20px;
+      filter: invert(1);
+    }
+
+    .mobile-right {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 8px;
+      flex-shrink: 0;
+      width: auto;
+    }
+
+    .mobile-logo {
+      height: 36px;
+      width: auto;
+      display: block;
+    }
+
+    .mobile-palette {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      padding: 6px;
+      background: #121212;
+      border: 1px solid #333333;
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+
+    .mobile-palette .color-dot {
+      width: 36px;
+      height: 36px;
+    }
+
+    /* ── PORTRAIT POPUP ── */
+    #portrait-popup {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: rgba(0,0,0,0.7);
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    #portrait-popup.visible {
+      display: flex;
+    }
+
+    #portrait-popup .popup-card {
+      position: relative;
+      background: #1e1e1e;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.5);
+      max-width: 90vw;
+      width: min(360px, 100%);
+      color: #ffffff;
+      font-family: 'sofia-pro', sans-serif;
+      text-align: left;
+    }
+
+    #portrait-popup .popup-close {
+      position: absolute;
+      top: 14px;
+      right: 16px;
+      background: none;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      color: #ffffff;
+    }
+
+    #portrait-popup .popup-title {
+      margin: 0 0 12px;
+      font-weight: 700;
+      font-size: 16px;
+      line-height: 1.5;
+    }
+
+    #portrait-popup .popup-text {
+      margin: 0;
+      font-size: 16px;
+      line-height: 1.5;
+      color: #aaaaaa;
+    }
+
+    @media (max-width: 1193px) and (orientation: landscape) {
+      #page { display: none; }
+      #mobile-layout { display: flex; }
+
+      .mobile-left .drawing-area {
+        overflow: hidden;
+        border-radius: 12px;
+      }
+
+      .mobile-left .drawing-area canvas {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- PORTRAIT POPUP -->
+  <div id="portrait-popup">
+    <div class="popup-card">
+      <button class="popup-close" type="button" aria-label="Chiudi popup">✕</button>
+      <p class="popup-title">Ruota il telefono, scegli il colore e disegna sui frame dei film!</p>
+      <p class="popup-text">Quando hai finito, clicca il tasto invia!</p>
+    </div>
+  </div>
+
+  <!-- DESKTOP -->
+  <div id="page">
+    <div class="drawing-area">
+      <canvas id="drawingCanvas" width="1194" height="634"></canvas>
+      <div id="uploadSpinner" class="upload-spinner" aria-hidden="true"></div>
+    </div>
+    <div class="bottom-bar">
+      <div class="movie-info">
+        <div class="movie-title" id="movieTitle">8½</div>
+        <div class="movie-meta" id="movieMeta">Federico Fellini - 1963</div>
+      </div>
+      <div class="actions-pill">
+        <button id="clearButton" type="button" aria-label="Cancella tutto">
+          <img src="https://cdn.jsdelivr.net/npm/lucide-static@0.483.0/icons/eraser.svg" alt="">
+        </button>
+        <button id="undoButton" type="button" aria-label="Undo">
+          <img src="https://cdn.jsdelivr.net/npm/lucide-static@0.483.0/icons/rotate-ccw.svg" alt="">
+        </button>
+        <button id="redoButton" type="button" aria-label="Redo">
+          <img src="https://cdn.jsdelivr.net/npm/lucide-static@0.483.0/icons/rotate-cw.svg" alt="">
+        </button>
+        <button id="saveButton" type="button" aria-label="Salva">
+          <img src="https://cdn.jsdelivr.net/npm/lucide-static@0.483.0/icons/upload.svg" alt="">
+        </button>
+      </div>
+      <div class="color-palette" id="palette"></div>
+    </div>
+    <footer class="footer">
+      <div class="footer-logo">
+        <img src="logo.png" alt="Il Cinema in Piazza logo">
+      </div>
+      <div class="footer-copy">
+        <div class="footer-text">
+          <strong>TOCCA, CREA, PROIETTA.</strong>
+          Scegli un colore, disegna il tuo frame<br>e guardalo vivere sul grande schermo.<br>Scansiona il QR Code per scoprire Cinema<br>in Piazza e scaricare l'app.
+        </div>
+        <div class="qr-block">
+          <canvas id="qrCanvas" width="80" height="80"></canvas>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- MOBILE -->
+  <div id="mobile-layout">
+    <div class="mobile-left">
+      <div class="drawing-area">
+        <canvas id="mobileDrawingCanvas" width="1194" height="634"></canvas>
+        <div id="mobileUploadSpinner" class="upload-spinner" aria-hidden="true"></div>
+      </div>
+      <div class="mobile-bottom-bar">
+        <div class="movie-info">
+          <div class="movie-title" id="mobileMovieTitle">8½</div>
+          <div class="movie-meta" id="mobileMovieMeta">Federico Fellini - 1963</div>
+        </div>
+        <div class="actions-pill">
+          <button id="mobileCloseButton" type="button" aria-label="Cancella tutto">
+            <img src="https://cdn.jsdelivr.net/npm/lucide-static@0.483.0/icons/eraser.svg" alt="">
+          </button>
+          <button id="mobileUndoButton" type="button" aria-label="Undo">
+            <img src="https://cdn.jsdelivr.net/npm/lucide-static@0.483.0/icons/rotate-ccw.svg" alt="">
+          </button>
+          <button id="mobileRedoButton" type="button" aria-label="Redo">
+            <img src="https://cdn.jsdelivr.net/npm/lucide-static@0.483.0/icons/rotate-cw.svg" alt="">
+          </button>
+          <button id="mobileSaveButton" type="button" aria-label="Salva">
+            <img src="https://cdn.jsdelivr.net/npm/lucide-static@0.483.0/icons/upload.svg" alt="">
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="mobile-right">
+      <img src="logo.png" alt="Il Cinema in Piazza logo" class="mobile-logo">
+      <div class="mobile-palette" id="mobilePalette"></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+  <script>
+    const UPLOADCARE_PUBKEY = '5c6b9d160fe3ee2d6566';
+
+    const canvas = document.getElementById('drawingCanvas');
+    const ctx = canvas.getContext('2d');
+    const movieTitle = document.getElementById('movieTitle');
+    const movieMeta = document.getElementById('movieMeta');
+    const undoButton = document.getElementById('undoButton');
+    const redoButton = document.getElementById('redoButton');
+    const clearButton = document.getElementById('clearButton');
+    const saveButton = document.getElementById('saveButton');
+    const uploadSpinner = document.getElementById('uploadSpinner');
+    const paletteEl = document.getElementById('palette');
+
+    const mobileCanvas = document.getElementById('mobileDrawingCanvas');
+    const mobileCtx = mobileCanvas.getContext('2d');
+    const mobileMovieTitle = document.getElementById('mobileMovieTitle');
+    const mobileMovieMeta = document.getElementById('mobileMovieMeta');
+    const mobileUndoButton = document.getElementById('mobileUndoButton');
+    const mobileRedoButton = document.getElementById('mobileRedoButton');
+    const mobileCloseButton = document.getElementById('mobileCloseButton');
+    const mobileSaveButton = document.getElementById('mobileSaveButton');
+    const mobileUploadSpinner = document.getElementById('mobileUploadSpinner');
+    const mobilePaletteEl = document.getElementById('mobilePalette');
+
+    let filmsData = [];
+    let currentFilm = null;
+    let currentFrameImage = null;
+    let currentFrameName = '';
+
+    const paletteColors = ['#5B4FFF', '#FFB800', '#FD5996', '#00C97A', '#FF2F27'];
+    let currentColor = paletteColors[0];
+    let drawing = false;
+    let lastPoint = null;
+    let undoStack = [];
+    let redoStack = [];
+    const maxUndo = 10;
+
+    function applyCanvasSettings(context) {
+      context.lineJoin = 'round';
+      context.lineCap = 'round';
+      context.lineWidth = 4;
+      context.globalCompositeOperation = 'source-over';
+      context.strokeStyle = currentColor;
+    }
+
+    function getActiveCanvas() {
+      return window.matchMedia('(max-width: 1193px) and (orientation: landscape)').matches ? mobileCanvas : canvas;
+    }
+
+    function getActiveCtx() {
+      return window.matchMedia('(max-width: 1193px) and (orientation: landscape)').matches ? mobileCtx : ctx;
+    }
+
+    function saveSnapshot(stack) {
+      try {
+        const snap = getActiveCtx().getImageData(0, 0, getActiveCanvas().width, getActiveCanvas().height);
+        stack.push(snap);
+        if (stack.length > maxUndo) stack.shift();
+      } catch (e) {
+        console.warn('Impossibile salvare snapshot', e);
+      }
+    }
+
+    function updateRedoButton() {
+      const disabled = redoStack.length === 0;
+      [redoButton, mobileRedoButton].forEach(btn => {
+        btn.classList.toggle('is-disabled', disabled);
+        btn.setAttribute('aria-disabled', String(disabled));
+      });
+    }
+
+    function setColor(color) {
+      currentColor = color;
+      ctx.strokeStyle = color;
+      mobileCtx.strokeStyle = color;
+      document.querySelectorAll('.color-dot').forEach(dot => {
+        dot.classList.toggle('active', dot.dataset.color === color);
+      });
+    }
+
+    function createPalette() {
+      [paletteEl, mobilePaletteEl].forEach(container => {
+        paletteColors.forEach(color => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'color-dot';
+          btn.dataset.color = color;
+          btn.style.backgroundColor = color;
+          btn.setAttribute('aria-label', `Colore ${color}`);
+          if (color === currentColor) btn.classList.add('active');
+          btn.addEventListener('click', () => setColor(color));
+          container.appendChild(btn);
+        });
+      });
+    }
+
+    function updateMovieInfo() {
+      if (!currentFilm) return;
+      const t = currentFilm.titolo;
+      const m = `${currentFilm.autore} - ${currentFilm.anno}`;
+      movieTitle.textContent = t;
+      movieMeta.textContent = m;
+      mobileMovieTitle.textContent = t;
+      mobileMovieMeta.textContent = m;
+    }
+
+    function drawImageCover(image, targetCanvas, targetCtx) {
+      const cr = targetCanvas.width / targetCanvas.height;
+      const ir = image.width / image.height;
+      let sx = 0, sy = 0, sw = image.width, sh = image.height;
+      if (ir > cr) { sw = image.height * cr; sx = (image.width - sw) / 2; }
+      else { sh = image.width / cr; sy = (image.height - sh) / 2; }
+      targetCtx.clearRect(0, 0, targetCanvas.width, targetCanvas.height);
+      targetCtx.drawImage(image, sx, sy, sw, sh, 0, 0, targetCanvas.width, targetCanvas.height);
+    }
+
+    async function loadFilmsData() {
+      try {
+        const res = await fetch('films.json');
+        filmsData = await res.json();
+      } catch (e) {
+        console.error('Errore films.json', e);
+      }
+    }
+
+    async function loadRandomFrameForFilm(film) {
+      if (typeof film.frameMin !== 'number' || typeof film.frameMax !== 'number') return;
+      const range = film.frameMax - film.frameMin + 1;
+      if (range <= 0) return;
+      for (let i = 0; i < 10; i++) {
+        const n = Math.floor(Math.random() * range) + film.frameMin;
+        const src = `${film.cartella}/Sequence ${String(n).padStart(5, '0')}.jpg`;
+        try {
+          const img = await new Promise((res, rej) => {
+            const el = new Image();
+            el.onload = () => res(el);
+            el.onerror = rej;
+            el.src = src;
+          });
+          currentFrameImage = img;
+          currentFrameName = src;
+          redoStack = [];
+          updateRedoButton();
+          drawImageCover(img, canvas, ctx);
+          drawImageCover(img, mobileCanvas, mobileCtx);
+          saveSnapshot(undoStack);
+          updateMovieInfo();
+          return;
+        } catch (_) {}
+      }
+    }
+
+    async function loadRandomFrame() {
+      if (!filmsData.length) return;
+      currentFilm = filmsData[Math.floor(Math.random() * filmsData.length)];
+      await loadRandomFrameForFilm(currentFilm);
+    }
+
+    function pointerPosition(event, targetCanvas) {
+      const rect = targetCanvas.getBoundingClientRect();
+      const touch = event.touches && event.touches[0];
+      const cx = touch ? touch.clientX : event.clientX;
+      const cy = touch ? touch.clientY : event.clientY;
+      return {
+        x: (cx - rect.left) * (targetCanvas.width / rect.width),
+        y: (cy - rect.top) * (targetCanvas.height / rect.height)
+      };
+    }
+
+    function jitter(v) { return v + (Math.random() * 1.5 - 0.75); }
+
+    function createDrawingHandlers(targetCanvas, targetCtx) {
+      return {
+        beginDrawing(e) {
+          if (e.target !== targetCanvas) return;
+          if (e.type === 'mousedown' && e.button !== 0) return;
+          e.preventDefault();
+          saveSnapshot(undoStack);
+          redoStack = [];
+          updateRedoButton();
+          drawing = true;
+          lastPoint = pointerPosition(e, targetCanvas);
+          targetCtx.beginPath();
+          targetCtx.moveTo(jitter(lastPoint.x), jitter(lastPoint.y));
+        },
+        draw(e) {
+          if (!drawing) return;
+          e.preventDefault();
+          const p = pointerPosition(e, targetCanvas);
+          targetCtx.lineTo(jitter(p.x), jitter(p.y));
+          targetCtx.stroke();
+          lastPoint = p;
+        },
+        endDrawing(e) {
+          if (!drawing) return;
+          e.preventDefault();
+          drawing = false;
+          targetCtx.closePath();
+          lastPoint = null;
+        }
+      };
+    }
+
+    const desktopHandlers = createDrawingHandlers(canvas, ctx);
+    const mobileHandlers = createDrawingHandlers(mobileCanvas, mobileCtx);
+
+    function undo() {
+      const snap = undoStack.pop();
+      if (!snap) return;
+      saveSnapshot(redoStack);
+      ctx.putImageData(snap, 0, 0);
+      mobileCtx.putImageData(snap, 0, 0);
+      updateRedoButton();
+    }
+
+    function redo() {
+      const snap = redoStack.pop();
+      if (!snap) return;
+      saveSnapshot(undoStack);
+      ctx.putImageData(snap, 0, 0);
+      mobileCtx.putImageData(snap, 0, 0);
+      updateRedoButton();
+    }
+
+    function clearCanvas() {
+      saveSnapshot(undoStack);
+      redoStack = [];
+      updateRedoButton();
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      mobileCtx.clearRect(0, 0, mobileCanvas.width, mobileCanvas.height);
+      if (currentFrameImage) {
+        drawImageCover(currentFrameImage, canvas, ctx);
+        drawImageCover(currentFrameImage, mobileCanvas, mobileCtx);
+      }
+    }
+
+    function getUploadFileName() {
+      const now = new Date();
+      const pad = v => String(v).padStart(2, '0');
+      const date = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+      const base = (currentFrameName ? currentFrameName.split('/').pop() : 'totem-canvas.jpg').replace(/\.[^/.]+$/, '');
+      return `${base}_${date}.png`;
+    }
+
+    function setUploading(v) {
+      uploadSpinner.style.display = v ? 'block' : 'none';
+      mobileUploadSpinner.style.display = v ? 'block' : 'none';
+    }
+
+    async function uploadCanvasToUploadcare() {
+      const ac = getActiveCanvas();
+      const blob = await new Promise(res => ac.toBlob(res, 'image/png'));
+      if (!blob) return;
+      const fd = new FormData();
+      fd.append('UPLOADCARE_PUB_KEY', UPLOADCARE_PUBKEY);
+      fd.append('UPLOADCARE_STORE', '1');
+      fd.append('file', blob, getUploadFileName());
+      setUploading(true);
+      try {
+        const res = await fetch('https://upload.uploadcare.com/base/', { method: 'POST', body: fd });
+        const result = await res.json();
+        if (!res.ok) { console.error('Upload fallito:', result.error); return; }
+        console.log('Caricato:', result.file);
+        await loadRandomFrame();
+      } catch (e) {
+        console.error('Errore upload:', e);
+      } finally {
+        setUploading(false);
+      }
+    }
+
+    function initQRCode() {
+      const qc = document.getElementById('qrCanvas');
+      if (window.QRCode) QRCode.toCanvas(qc, 'https://example.com', { width: 80, margin: 0 }, e => { if (e) console.error(e); });
+    }
+
+    function initPortraitPopup() {
+      const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+      if (!isMobile) return;
+      if (window.innerHeight <= window.innerWidth) return;
+      const popup = document.getElementById('portrait-popup');
+      const closeBtn = popup.querySelector('.popup-close');
+      popup.classList.add('visible');
+      const hide = () => { popup.classList.remove('visible'); closeBtn.removeEventListener('click', hide); };
+      closeBtn.addEventListener('click', hide);
+      setTimeout(hide, 8000);
+    }
+
+    async function init() {
+      await loadFilmsData();
+      applyCanvasSettings(ctx);
+      applyCanvasSettings(mobileCtx);
+      createPalette();
+      await loadRandomFrame();
+      initQRCode();
+
+      canvas.addEventListener('mousedown', desktopHandlers.beginDrawing);
+      canvas.addEventListener('mousemove', desktopHandlers.draw);
+      canvas.addEventListener('touchstart', desktopHandlers.beginDrawing, { passive: false });
+      canvas.addEventListener('touchmove', desktopHandlers.draw, { passive: false });
+
+      mobileCanvas.addEventListener('mousedown', mobileHandlers.beginDrawing);
+      mobileCanvas.addEventListener('mousemove', mobileHandlers.draw);
+      mobileCanvas.addEventListener('touchstart', mobileHandlers.beginDrawing, { passive: false });
+      mobileCanvas.addEventListener('touchmove', mobileHandlers.draw, { passive: false });
+
+      window.addEventListener('mouseup', desktopHandlers.endDrawing);
+      window.addEventListener('touchend', desktopHandlers.endDrawing, { passive: false });
+      window.addEventListener('touchcancel', desktopHandlers.endDrawing, { passive: false });
+      window.addEventListener('mouseup', mobileHandlers.endDrawing);
+      window.addEventListener('touchend', mobileHandlers.endDrawing, { passive: false });
+      window.addEventListener('touchcancel', mobileHandlers.endDrawing, { passive: false });
+
+      undoButton.addEventListener('click', undo);
+      redoButton.addEventListener('click', redo);
+      clearButton.addEventListener('click', clearCanvas);
+      saveButton.addEventListener('click', uploadCanvasToUploadcare);
+
+      mobileUndoButton.addEventListener('click', undo);
+      mobileRedoButton.addEventListener('click', redo);
+      mobileCloseButton.addEventListener('click', clearCanvas);
+      mobileSaveButton.addEventListener('click', uploadCanvasToUploadcare);
+
+      updateRedoButton();
+
+      document.addEventListener('mousedown', e => {
+        if (!canvas.contains(e.target) && !mobileCanvas.contains(e.target) && !e.target.closest('button') && !e.target.closest('.color-dot')) e.preventDefault();
+      }, { passive: false });
+      document.addEventListener('touchstart', e => {
+        if (!canvas.contains(e.target) && !mobileCanvas.contains(e.target) && !e.target.closest('button') && !e.target.closest('.color-dot')) e.preventDefault();
+      }, { passive: false });
+
+      initPortraitPopup();
+    }
+
+    init();
+  </script>
+</body>
+</html>
