@@ -655,7 +655,9 @@
       if (range <= 0) return;
       for (let i = 0; i < 10; i++) {
         const n = Math.floor(Math.random() * range) + film.frameMin;
-        const src = `${film.cartella}/Sequence ${String(n).padStart(5, '0')}.jpg`;
+        const filePrefix = film.framePrefix || 'frames';
+        const padLength = film.framePad || 4;
+        const src = `${film.cartella}/${filePrefix}${String(n).padStart(padLength, '0')}.jpg`;
         try {
           const img = await new Promise((res, rej) => {
             const el = new Image();
