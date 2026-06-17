@@ -631,14 +631,19 @@
     }
 
     function drawImageCover(image, targetCanvas, targetCtx) {
-      const cr = targetCanvas.width / targetCanvas.height;
-      const ir = image.width / image.height;
-      let sx = 0, sy = 0, sw = image.width, sh = image.height;
-      if (ir > cr) { sw = image.height * cr; sx = (image.width - sw) / 2; }
-      else { sh = image.width / cr; sy = (image.height - sh) / 2; }
-      targetCtx.clearRect(0, 0, targetCanvas.width, targetCanvas.height);
-      targetCtx.drawImage(image, sx, sy, sw, sh, 0, 0, targetCanvas.width, targetCanvas.height);
-    }
+  const zoom = 1.06;
+  const cr = targetCanvas.width / targetCanvas.height;
+  const ir = image.width / image.height;
+  let sx = 0, sy = 0, sw = image.width, sh = image.height;
+  if (ir > cr) { sw = image.height * cr; sx = (image.width - sw) / 2; }
+  else { sh = image.width / cr; sy = (image.height - sh) / 2; }
+  sw = sw / zoom;
+  sh = sh / zoom;
+  sx = sx + (image.width / zoom - sw) * 0 + (sw * (zoom - 1)) / 2;
+  sy = sy + (sh * (zoom - 1)) / 2;
+  targetCtx.clearRect(0, 0, targetCanvas.width, targetCanvas.height);
+  targetCtx.drawImage(image, sx, sy, sw, sh, 0, 0, targetCanvas.width, targetCanvas.height);
+}
 
     async function loadFilmsData() {
       try {
